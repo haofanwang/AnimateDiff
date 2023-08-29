@@ -1,0 +1,38 @@
+pretrained_model_path: models/StableDiffusion/stable-diffusion-v1-5
+motion_module: models/Motion_Module/mm_sd_v14.ckpt
+motion_module_pe_multiplier: 1
+output_dir: models/Motion_Module/webvid-train-10M-inpaint-finetune-sd14-interpolation
+train_data:
+  meta_video_root: /mnt/public02/dataset/video_language_datasets/wanghaofan/webvid
+  meta_path: /mnt/public02/dataset/video_language_datasets/wanghaofan/webvid/results_10M_train.json
+  n_sample_frames: 16
+  width: 256
+  height: 256
+  sample_start_idx: 0
+  sample_frame_rate: 16
+validation_data:
+  prompts:
+  - a woman standing on the side of a road at night,girl, long hair, motor vehicle, car, looking at viewer, ground vehicle, night, hands in pockets, blurry background, coat, black hair, parted lips, bokeh, jacket, brown hair, outdoors, red lips, upper body, artist name
+  video_length: 16
+  width: 256
+  height: 256
+  temporal_context: 16
+  strides: 3
+  overlap: 4
+  num_inference_steps: 25
+  guidance_scale: 7.5
+  use_inv_latent: false
+  num_inv_steps: 50
+learning_rate: 1.0e-05
+train_batch_size: 8
+max_train_steps: 200000
+checkpointing_steps: 5000
+validation_steps: 10000000
+# trainable_modules:
+# - to_q
+train_whole_module: true
+seed: 33
+mixed_precision: fp16
+use_8bit_adam: false
+gradient_checkpointing: true
+enable_xformers_memory_efficient_attention: true
