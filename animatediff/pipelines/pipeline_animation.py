@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import torch
+import PIL
 from tqdm import tqdm
 
 from diffusers.utils import is_accelerate_available
@@ -28,7 +29,9 @@ from diffusers.utils import deprecate, logging, BaseOutput
 from einops import rearrange
 
 from ..models.unet import UNet3DConditionModel
+from ..utils.util import preprocess_image
 
+import torchvision.transforms as transforms
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -283,8 +286,45 @@ class AnimationPipeline(DiffusionPipeline):
                 f" {type(callback_steps)}."
             )
 
-    def prepare_latents(self, batch_size, num_channels_latents, video_length, height, width, dtype, device, generator, latents=None):
+    def prepare_latents(self, init_image, last_image, batch_size, num_channels_latents, video_length, height, width, dtype, device, generator, latents=None):
         shape = (batch_size, num_channels_latents, video_length, height // self.vae_scale_factor, width // self.vae_scale_factor)
+        
+        if init_image is not None:
+            image = PIL.Image.open(init_image).resize((512,512)).convert('RGB')
+            image = preprocess_image(image)
+            if not isinstance(image, (torch.Tensor, PIL.Image.Image, list)):
+                raise ValueError(
+                    f"`image` has to be of type `torch.Tensor`, `PIL.Image.Image` or list but is {type(image)}"
+                )
+            image = image.to(device=device, dtype=dtype)
+            if isinstance(generator, list):
+                init_latents = [
+                    self.vae.encode(image[i : i + 1]).latent_dist.sample(generator[i]) for i in range(batch_size)
+                ]
+                init_latents = torch.cat(init_latents, dim=0)
+            else:
+                init_latents = self.vae.encode(image).latent_dist.sample(generator)
+        else:
+            init_latents = None
+        
+        if last_image is not None:
+            image = PIL.Image.open(last_image).resize((512,512)).convert('RGB')
+            image = preprocess_image(image)
+            if not isinstance(image, (torch.Tensor, PIL.Image.Image, list)):
+                raise ValueError(
+                    f"`image` has to be of type `torch.Tensor`, `PIL.Image.Image` or list but is {type(image)}"
+                )
+            image = image.to(device=device, dtype=dtype)
+            if isinstance(generator, list):
+                last_latents = [
+                    self.vae.encode(image[i : i + 1]).latent_dist.sample(generator[i]) for i in range(batch_size)
+                ]
+                last_latents = torch.cat(last_latents, dim=0)
+            else:
+                last_latents = self.vae.encode(image).latent_dist.sample(generator)
+        else:
+            last_latents = None
+        
         if isinstance(generator, list) and len(generator) != batch_size:
             raise ValueError(
                 f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
@@ -303,6 +343,44 @@ class AnimationPipeline(DiffusionPipeline):
                 latents = torch.cat(latents, dim=0).to(device)
             else:
                 latents = torch.randn(shape, generator=generator, device=rand_device, dtype=dtype).to(device)
+                
+                # init image ref
+                if init_image is not None and last_image is None:
+                    # fast at the beginning, then gets slower gradually
+                    init_alpha_list = []
+                    #init_alpha_list = [0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.045, 0.045, 0.045]
+                    if init_latents is not None:
+                        if len(init_alpha_list) == 0:
+                            init_alpha = 0.10
+                            #truncate_alpha = 0.04
+                            truncate_alpha = 0.05 # this is a human tuned param
+                            for i in range(video_length):
+                                if init_alpha != truncate_alpha:
+                                    init_alpha = round(0.1 - i * 0.01, 3)  # decimal
+                                init_alpha_list.append(init_alpha)
+                                latents[:, :, i, :, :] = init_latents * init_alpha + latents[:, :, i, :, :] * (1 - init_alpha)
+                        else:
+                            for i in range(video_length):
+                                init_alpha = init_alpha_list[i]
+                                latents[:, :, i, :, :] = init_latents * init_alpha + latents[:, :, i, :, :] * (1 - init_alpha)
+                elif init_latents is not None and last_latents is not None:
+                    
+                    """
+                    # TODO: normalization
+                    init_latents *= 0.18215
+                    last_latents *= 0.18215
+                    
+                    init_latents = (init_latents - init_latents.mean()) / init_latents.std()
+                    last_latents = (last_latents - last_latents.mean()) / last_latents.std()
+                    """
+                    
+                    init_latents /= 30
+                    last_latents /= 30
+                    print("ok")
+                    
+                    latents[:,:,0,:,:] = init_latents
+                    latents[:,:,-1,:,:] = last_latents
+                
         else:
             if latents.shape != shape:
                 raise ValueError(f"Unexpected latents shape, got {latents.shape}, expected {shape}")
@@ -311,16 +389,28 @@ class AnimationPipeline(DiffusionPipeline):
         # scale the initial noise by the standard deviation required by the scheduler
         latents = latents * self.scheduler.init_noise_sigma
         return latents
+    
+    def get_timesteps(self, num_inference_steps, strength):
+        # get the original timestep using init_timestep
+        init_timestep = min(int(num_inference_steps * strength), num_inference_steps)
 
+        t_start = max(num_inference_steps - init_timestep, 0)
+        timesteps = self.scheduler.timesteps[t_start:]
+
+        return timesteps, num_inference_steps - t_start
+    
     @torch.no_grad()
     def __call__(
         self,
         prompt: Union[str, List[str]],
         video_length: Optional[int],
+        init_image: str = None,
+        last_image: str = None,
         height: Optional[int] = None,
         width: Optional[int] = None,
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
+        strength: float = 0.8,
         negative_prompt: Optional[Union[str, List[str]]] = None,
         num_videos_per_prompt: Optional[int] = 1,
         eta: float = 0.0,
@@ -330,6 +420,7 @@ class AnimationPipeline(DiffusionPipeline):
         return_dict: bool = True,
         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
         callback_steps: Optional[int] = 1,
+        fp16 = False,
         **kwargs,
     ):
         # Default height and width to unet
@@ -364,10 +455,20 @@ class AnimationPipeline(DiffusionPipeline):
         # Prepare timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=device)
         timesteps = self.scheduler.timesteps
+        
+        # Use ref images, similar to img2img
+        if init_image is not None:
+            if last_image is not None:
+                strength = 0.8
+            else:
+                strength = 0.6
+            timesteps, num_inference_steps = self.get_timesteps(num_inference_steps, strength)
 
         # Prepare latent variables
         num_channels_latents = self.unet.in_channels
         latents = self.prepare_latents(
+            init_image,
+            last_image,
             batch_size * num_videos_per_prompt,
             num_channels_latents,
             video_length,
@@ -392,14 +493,8 @@ class AnimationPipeline(DiffusionPipeline):
                 latent_model_input = self.scheduler.scale_model_input(latent_model_input, t)
 
                 # predict the noise residual
-                noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample.to(dtype=latents_dtype)
-                # noise_pred = []
-                # import pdb
-                # pdb.set_trace()
-                # for batch_idx in range(latent_model_input.shape[0]):
-                #     noise_pred_single = self.unet(latent_model_input[batch_idx:batch_idx+1], t, encoder_hidden_states=text_embeddings[batch_idx:batch_idx+1]).sample.to(dtype=latents_dtype)
-                #     noise_pred.append(noise_pred_single)
-                # noise_pred = torch.cat(noise_pred)
+                with torch.autocast('cuda', enabled=fp16, dtype=torch.float16):
+                    noise_pred = self.unet(latent_model_input, t, encoder_hidden_states=text_embeddings).sample.to(dtype=latents_dtype)
 
                 # perform guidance
                 if do_classifier_free_guidance:

@@ -1,0 +1,22 @@
+ToonYou:
+  base: ""
+  path: "models/DreamBooth_LoRA/toonyou_beta3.safetensors"
+  
+  motion_module:
+    - "models/Motion_Module/webvid-train-10M-inpaint-finetune-sd14-2frames-normalize/mm-10000.pth"
+
+  seed:           [10788741199826055526, 6520604954829636163, 6519455744612555650, 16372571278361863751]
+  steps:          25
+  guidance_scale: 7.5
+    
+  init_image: "__assets__/inits/1.png"
+  last_image: "__assets__/inits/2.png"
+  
+  prompt:
+    - "mikudef, hatsunemiku1, best quality, masterpiece, 1girl, standing, miku, smiling, side view, sea, anime character, sky, cloud, outdoor, bright, miku hatsune, mikuo"
+    - "mikudef, hatsunemiku1, best quality, masterpiece, 1girl, standing, miku, smiling, right view, sea, anime character, sky, cloud, outdoor, bright, miku hatsune, mikuo"
+    - "best quality, masterpiece, 1girl, standing, miku, smiling, looking-at-viewer, sea, anime character, sky, cloud, outdoor, bright, miku hatsune, mikuo"
+  n_prompt:
+    - "badhandv4,easynegative,ng_deepnegative_v1_75t,verybadimagenegative_v1.3, bad-artist, bad_prompt_version2-neg, teeth"
+    - "badhandv4,easynegative,ng_deepnegative_v1_75t,verybadimagenegative_v1.3, bad-artist, bad_prompt_version2-neg, teeth"
+    - "badhandv4,easynegative,ng_deepnegative_v1_75t,verybadimagenegative_v1.3, bad-artist, bad_prompt_version2-neg, teeth"

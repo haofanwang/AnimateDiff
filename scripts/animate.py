@@ -108,6 +108,9 @@ def main(args):
             prompts      = model_config.prompt
             n_prompts    = list(model_config.n_prompt) * len(prompts) if len(model_config.n_prompt) == 1 else model_config.n_prompt
             
+            init_image   = model_config.init_image if hasattr(model_config, 'init_image') else None
+            last_image   = model_config.last_image if hasattr(model_config, 'last_image') else None
+            
             random_seeds = model_config.get("seed", [-1])
             random_seeds = [random_seeds] if isinstance(random_seeds, int) else list(random_seeds)
             random_seeds = random_seeds * len(prompts) if len(random_seeds) == 1 else random_seeds
@@ -125,11 +128,14 @@ def main(args):
                 sample = pipeline(
                     prompt,
                     negative_prompt     = n_prompt,
+                    init_image          = init_image,
+                    last_image          = last_image,
                     num_inference_steps = model_config.steps,
                     guidance_scale      = model_config.guidance_scale,
                     width               = args.W,
                     height              = args.H,
                     video_length        = args.L,
+                    fp16                = args.fp16,
                 ).videos
                 samples.append(sample)
 
@@ -150,6 +156,8 @@ if __name__ == "__main__":
     parser.add_argument("--pretrained_model_path", type=str, default="models/StableDiffusion/stable-diffusion-v1-5",)
     parser.add_argument("--inference_config",      type=str, default="configs/inference/inference.yaml")    
     parser.add_argument("--config",                type=str, required=True)
+    
+    parser.add_argument("--fp16", action="store_true")
     
     parser.add_argument("--L", type=int, default=16 )
     parser.add_argument("--W", type=int, default=512)
