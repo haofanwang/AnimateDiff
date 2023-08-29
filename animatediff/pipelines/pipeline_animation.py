@@ -364,20 +364,14 @@ class AnimationPipeline(DiffusionPipeline):
                                 init_alpha = init_alpha_list[i]
                                 latents[:, :, i, :, :] = init_latents * init_alpha + latents[:, :, i, :, :] * (1 - init_alpha)
                 elif init_latents is not None and last_latents is not None:
-                    
-                    """
-                    # TODO: normalization
+
+                    # be consistent to training
                     init_latents *= 0.18215
                     last_latents *= 0.18215
                     
                     init_latents = (init_latents - init_latents.mean()) / init_latents.std()
                     last_latents = (last_latents - last_latents.mean()) / last_latents.std()
-                    """
-                    
-                    init_latents /= 30
-                    last_latents /= 30
-                    print("ok")
-                    
+
                     latents[:,:,0,:,:] = init_latents
                     latents[:,:,-1,:,:] = last_latents
                 
