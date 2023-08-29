@@ -108,6 +108,9 @@ def main(args):
             prompts      = model_config.prompt
             n_prompts    = list(model_config.n_prompt) * len(prompts) if len(model_config.n_prompt) == 1 else model_config.n_prompt
             
+            init_image   = model_config.init_image if hasattr(model_config, 'init_image') else None
+            last_image   = model_config.last_image if hasattr(model_config, 'last_image') else None
+            
             random_seeds = model_config.get("seed", [-1])
             random_seeds = [random_seeds] if isinstance(random_seeds, int) else list(random_seeds)
             random_seeds = random_seeds * len(prompts) if len(random_seeds) == 1 else random_seeds
@@ -125,6 +128,8 @@ def main(args):
                 sample = pipeline(
                     prompt,
                     negative_prompt     = n_prompt,
+                    init_image          = init_image,
+                    last_image          = last_image,
                     num_inference_steps = model_config.steps,
                     guidance_scale      = model_config.guidance_scale,
                     width               = args.W,

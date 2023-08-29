@@ -1,0 +1,25 @@
+ToonYou:
+
+  base: ""
+  path: "models/DreamBooth_LoRA/toonyou_beta3.safetensors"
+
+  motion_module:
+    - "models/Motion_Module/mm_sd_v14.ckpt"
+
+  seed:           [10788741199826055526, 6520604954829636163, 6519455744612555650, 16372571278361863751]
+  steps:          25
+  guidance_scale: 7.5
+  
+  init_image: "__assets__/inits/water2.png"
+  
+  prompt:
+    - "A lovely girl underwater on a summer's day, white skin, smiling at someone underneath,clear water, clear underwater lighting, Tyndall effects, bubbles floating in water"
+    - "A lovely girl underwater on a summer's day, white skin, smiling at someone underneath,clear water, clear underwater lighting, Tyndall effects, bubbles floating in water"
+    - "A lovely girl underwater on a summer's day, white skin, diving for a pose, smiling at someone underneath, digital painting, clear water, clear underwater lighting, Tyndall effects, surreal oil painting, head and above, clear water"
+    - "A lovely girl underwater on a summer's day, white skin, diving for a pose, smiling at someone underneath, digital painting, clear water, clear underwater lighting, Tyndall effects, surreal oil painting, head and above, clear water"
+
+  n_prompt:
+    - ""
+    - ""
+    - ""
+    - ""
