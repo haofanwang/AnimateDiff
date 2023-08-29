@@ -3,8 +3,8 @@ motion_module: models/Motion_Module/mm_sd_v14.ckpt
 motion_module_pe_multiplier: 1
 output_dir: models/Motion_Module/webvid-val-5k-finetune-sd14
 train_data:
-  meta_video_root: /mnt/public02/dataset/video_language_datasets/wanghaofan/webvid/results_2M_val
-  meta_path: data/webvid-5k.json
+  meta_video_root: /mnt/public02/dataset/video_language_datasets/wanghaofan/webvid
+  meta_path: /mnt/public02/dataset/video_language_datasets/wanghaofan/webvid/results_2M_val.json
   n_sample_frames: 16
   width: 256
   height: 256

@@ -37,11 +37,8 @@ try:
     import cv2
     from omegaconf import OmegaConf
     
-    model_dir = '../../lama/big-lama/models/best.ckpt'
-    if not os.path.exists(model_dir):
-        ckpts = "https://huggingface.co/camenduru/big-lama/blob/main/big-lama/models/best.ckpt"
-        os.system(f"wget -O {ckpts} {model_dir}")
-    
+    # # https://huggingface.co/camenduru/big-lama/tree/main/big-lama/models
+    # put the ckpt under './lama/big-lama/models/best.ckpt'
     use_lama = True
     
 except Exception as e:
@@ -143,7 +140,7 @@ class MultiTuneAVideoDataset(Dataset):
         return cur_res
     
     def __getitem__(self, index):
-        
+                
         # load and sample video frames
         try:
             if use_lama:
@@ -167,10 +164,9 @@ class MultiTuneAVideoDataset(Dataset):
                 new_frame = self.inpaint_image(frame, target_size=(256,256))
                 new_video.append(new_frame)
             video = np.stack(new_video, axis=0)
-            video = torch.from_numpy(video).contiguous()
-        else:
-            video = torch.from_numpy(video.asnumpy()).contiguous()
-            video = rearrange(video, "f h w c -> f c h w")
+            
+        video = torch.from_numpy(video).contiguous()
+        video = rearrange(video, "f h w c -> f c h w") 
 
         example = {
             "pixel_values": (video / 127.5 - 1.0),
