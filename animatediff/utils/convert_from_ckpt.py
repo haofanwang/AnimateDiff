@@ -127,20 +127,30 @@ def renew_vae_attention_paths(old_list, n_shave_prefix_segments=0):
     for old_item in old_list:
         new_item = old_item
 
-        new_item = new_item.replace("norm.weight", "group_norm.weight")
-        new_item = new_item.replace("norm.bias", "group_norm.bias")
-
-        new_item = new_item.replace("q.weight", "to_q.weight")
-        new_item = new_item.replace("q.bias", "to_q.bias")
-
-        new_item = new_item.replace("k.weight", "to_k.weight")
-        new_item = new_item.replace("k.bias", "to_k.bias")
-
-        new_item = new_item.replace("v.weight", "to_v.weight")
-        new_item = new_item.replace("v.bias", "to_v.bias")
-
-        new_item = new_item.replace("proj_out.weight", "to_out.0.weight")
-        new_item = new_item.replace("proj_out.bias", "to_out.0.bias")
+        if "group_norm.weight" not in new_item:
+            new_item = new_item.replace("norm.weight", "group_norm.weight")
+        if "group_norm.bias" not in new_item:
+            new_item = new_item.replace("norm.bias", "group_norm.bias")
+        
+        if "to_q.weight" not in new_item:
+            new_item = new_item.replace("q.weight", "to_q.weight")
+        if "to_q.bias" not in new_item:
+            new_item = new_item.replace("q.bias", "to_q.bias")
+        
+        if "to_k.weight" not in new_item:
+            new_item = new_item.replace("k.weight", "to_k.weight")
+        if "to_k.bias" not in new_item:
+            new_item = new_item.replace("k.bias", "to_k.bias")
+        
+        if "to_v.weight" not in new_item:
+            new_item = new_item.replace("v.weight", "to_v.weight")
+        if "to_v.bias" not in new_item:
+            new_item = new_item.replace("v.bias", "to_v.bias")
+        
+        if "to_out.0.weight" not in new_item:
+            new_item = new_item.replace("proj_out.weight", "to_out.0.weight")
+        if "to_out.0.bias" not in new_item:
+            new_item = new_item.replace("proj_out.bias", "to_out.0.bias")
 
         new_item = shave_segments(new_item, n_shave_prefix_segments=n_shave_prefix_segments)
 
