@@ -290,7 +290,7 @@ class AnimationPipeline(DiffusionPipeline):
         shape = (batch_size, num_channels_latents, video_length, height // self.vae_scale_factor, width // self.vae_scale_factor)
         
         if init_image is not None:
-            image = PIL.Image.open(init_image).resize((512,512)).convert('RGB')
+            image = PIL.Image.open(init_image).resize((width,height)).convert('RGB')
             image = preprocess_image(image)
             if not isinstance(image, (torch.Tensor, PIL.Image.Image, list)):
                 raise ValueError(
@@ -308,7 +308,7 @@ class AnimationPipeline(DiffusionPipeline):
             init_latents = None
         
         if last_image is not None:
-            image = PIL.Image.open(last_image).resize((512,512)).convert('RGB')
+            image = PIL.Image.open(last_image).resize((width,height)).convert('RGB')
             image = preprocess_image(image)
             if not isinstance(image, (torch.Tensor, PIL.Image.Image, list)):
                 raise ValueError(
