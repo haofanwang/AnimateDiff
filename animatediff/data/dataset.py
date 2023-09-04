@@ -12,11 +12,13 @@ from typing import Callable, List, Optional, Union
 
 from torch.utils.data import Dataset
 from torchvision import utils
+import torchvision.transforms as transforms
 from torchvision.transforms import Compose
 import torchvision.transforms._transforms_video as T
 
+
+do_inpaint = False
 try:
-    
     # https://huggingface.co/camenduru/big-lama/blob/main/big-lama/models/best.ckpt
     import sys
     sys.path.append('../../lama')
@@ -39,7 +41,10 @@ try:
     
     # # https://huggingface.co/camenduru/big-lama/tree/main/big-lama/models
     # put the ckpt under './lama/big-lama/models/best.ckpt'
-    use_lama = True
+    if do_inpaint:
+        use_lama = True
+    else:
+        use_lama = False
     
 except Exception as e:
     print("lama is not found! Dewatermarking will be disabled!")
@@ -99,6 +104,13 @@ class MultiTuneAVideoDataset(Dataset):
             self.mask = self.expandEdge(255-self.mask, k=7)
             self.mask = self.mask.astype('float32') / 255.0
         
+        self.pixel_transforms = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.Resize(min(width, height)),
+            transforms.CenterCrop((height, width)),
+            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
+        ])
+        
     def __len__(self):
         return len(self.video_path)
     
@@ -143,10 +155,7 @@ class MultiTuneAVideoDataset(Dataset):
                 
         # load and sample video frames
         try:
-            if use_lama:
-                vr = decord.VideoReader(self.video_path[index])
-            else:
-                vr = decord.VideoReader(self.video_path[index], width=self.width, height=self.height)
+            vr = decord.VideoReader(self.video_path[index])
         except Exception as e:
             os.remove(self.video_path[index])
             return self.__getitem__(random.randint(0, len(self.video_path)-1))
@@ -165,11 +174,13 @@ class MultiTuneAVideoDataset(Dataset):
                 new_video.append(new_frame)
             video = np.stack(new_video, axis=0)
             
-        video = torch.from_numpy(video).contiguous()
-        video = rearrange(video, "f h w c -> f c h w") 
+        #video = torch.from_numpy(video).contiguous()
+        #video = rearrange(video, "f h w c -> f c h w")
+        video = torch.from_numpy(video.asnumpy()).permute(0, 3, 1, 2).contiguous()
+        video = video / 255.
 
         example = {
-            "pixel_values": (video / 127.5 - 1.0),
+            "pixel_values": self.pixel_transforms(video),
             "prompt_ids": self.prompt_ids[index]
         }
         

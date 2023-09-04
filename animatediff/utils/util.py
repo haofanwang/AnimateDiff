@@ -14,11 +14,13 @@ import PIL.ImageOps
 from packaging import version
 from PIL import Image
 
+from skimage.exposure import match_histograms
+
 def zero_rank_print(s):
     if (not dist.is_initialized()) and (dist.is_initialized() and dist.get_rank() == 0): print("### " + s)
 
 
-def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=6, fps=8):
+def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=6, fps=8, ref=None):
     videos = rearrange(videos, "b c t h w -> t b c h w")
     outputs = []
     for x in videos:
@@ -28,7 +30,18 @@ def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=6, f
             x = (x + 1.0) / 2.0  # -1,1 -> 0,1
         x = (x * 255).numpy().astype(np.uint8)
         outputs.append(x)
-
+    
+    if ref is not None:
+        ref_img = cv2.imread(ref)
+        ref_img = cv2.resize(ref_img, outputs[0].shape[:2][::-1])
+        norm_outputs = []
+        for output in outputs:
+            output = cv2.cvtColor(output, cv2.COLOR_RGB2BGR)
+            output = match_histograms(output, ref_img, channel_axis=-1)
+            output = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
+            norm_outputs.append(output)
+        outputs = norm_outputs
+    
     os.makedirs(os.path.dirname(path), exist_ok=True)
     imageio.mimsave(path, outputs, duration=1000 * 1/fps)
 
