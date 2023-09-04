@@ -28,7 +28,7 @@ import math
 from pathlib import Path
 
 from compel import Compel
-from controlnet_aux import OpenposeDetector
+from controlnet_aux import OpenposeDetector, LineartDetector, CannyDetector
 
 def main(args):
     *_, func_args = inspect.getargvalues(inspect.currentframe())
@@ -65,6 +65,25 @@ def main(args):
                     use_safetensors=False
                 )
 
+            """
+            controlnet_names = [
+                "lllyasviel/control_v11p_sd15_openpose",
+                "lllyasviel/control_v11p_sd15_canny",
+                "lllyasviel/control_v11p_sd15_lineart",
+            ]
+            controlnet_list = []
+            for controlnet_name in controlnet_names:
+                controlnet_list.append(ControlNetModel.from_pretrained(
+                    controlnet_name,
+                    use_safetensors=False
+                ))
+            controlnet = MultiControlNetModel(controlnet_list)
+            
+            processor = OpenposeDetector.from_pretrained('lllyasviel/ControlNet')
+            lineart = LineartDetector.from_pretrained("lllyasviel/Annotators")
+            canny = CannyDetector()
+            """
+           
             pipeline = AnimationPipeline(
                 vae=vae, text_encoder=text_encoder, tokenizer=tokenizer, unet=unet, controlnet=controlnet,
                 scheduler=DDIMScheduler(**OmegaConf.to_container(inference_config.noise_scheduler_kwargs.DDIMScheduler)),
